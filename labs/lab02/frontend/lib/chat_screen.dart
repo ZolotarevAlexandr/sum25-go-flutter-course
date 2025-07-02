@@ -5,6 +5,7 @@ import 'dart:async';
 // ChatScreen displays the chat UI
 class ChatScreen extends StatefulWidget {
   final ChatService chatService;
+
   const ChatScreen({super.key, required this.chatService});
 
   @override
@@ -12,34 +13,106 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  // TODO: Add TextEditingController for input
-  // TODO: Add state for messages, loading, and error
-  // TODO: Subscribe to chatService.messageStream
-  // TODO: Implement UI for sending and displaying messages
-  // TODO: Simulate chat logic for tests (current implementation is a simulation)
+  final TextEditingController _textController = TextEditingController();
+
+  final List<String> _messages = [];
+  bool _isLoading = false;
+  String? _error;
+
+  StreamSubscription<String>? _subscription;
 
   @override
   void initState() {
     super.initState();
-    // TODO: Connect to chat service and set up listeners
+    _initChat();
+  }
+
+  Future<void> _initChat() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await widget.chatService.connect();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _subscription = widget.chatService.messageStream.listen((message) {
+      setState(() {
+        _messages.add(message);
+      });
+    }, onError: (err) {
+      setState(() {
+        _error = err.toString();
+      });
+    });
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
   void dispose() {
-    // TODO: Dispose controllers and subscriptions
+    _subscription?.cancel();
+    _textController.dispose();
     super.dispose();
   }
 
   void _sendMessage() async {
-    // TODO: Send message using chatService
+    final text = _textController.text;
+    if (text.isEmpty) {
+      return;
+    }
+
+    try {
+      await widget.chatService.sendMessage(text);
+      _textController.clear();
+    } catch (e) {
+      _error = e.toString();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Build chat UI with loading, error, and message list
     return Scaffold(
       appBar: AppBar(title: const Text('Chat')),
-      body: const Center(child: Text('TODO: Implement chat UI')),
+      body: Column(
+        children: [
+          if (_isLoading) CircularProgressIndicator(),
+          if (_error != null) Text("Connection error: $_error"),
+          Expanded(
+              child: ListView.builder(
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(_messages[index]),
+              );
+            },
+          )),
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                    child: TextField(
+                  controller: _textController,
+                  decoration: const InputDecoration(hintText: "Input message"),
+                )),
+                IconButton(
+                  onPressed: _sendMessage,
+                  icon: Icon(Icons.send),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }
