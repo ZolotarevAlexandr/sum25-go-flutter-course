@@ -2,20 +2,44 @@ package main
 
 import (
 	"log"
+	"net"
+	"net/http"
+	"time"
+
+	"lab03-backend/api"
+	"lab03-backend/storage"
 )
 
 func main() {
-	// TODO: Create a new memory storage instance
-	// TODO: Create a new API handler with the storage
-	// TODO: Setup routes using the handler
-	// TODO: Configure server with:
-	//   - Address: ":8080"
-	//   - Handler: the router
-	//   - ReadTimeout: 15 seconds
-	//   - WriteTimeout: 15 seconds
-	//   - IdleTimeout: 60 seconds
-	// TODO: Add logging to show server is starting
-	// TODO: Start the server and handle any errors
+	log.Println("Setting server up...")
 
-	log.Println("TODO: Implement main function")
+	memory := storage.NewMemoryStorage()
+	handler := api.NewHandler(memory)
+	router := handler.SetupRoutes()
+
+	wrappedRouter := api.ChainMiddleware(
+		api.RecoveryMiddleware,
+		api.LoggingMiddleware,
+		api.CorsMiddleware,
+	)(router)
+
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      wrappedRouter,
+		ReadTimeout:  time.Second * 15,
+		WriteTimeout: time.Second * 15,
+		IdleTimeout:  time.Second * 60,
+	}
+
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalf("Failed to create listener: %v", err)
+	}
+	defer listener.Close()
+
+	addr := listener.Addr().(*net.TCPAddr)
+	log.Printf("Server successfully started at http://localhost:%d", addr.Port)
+	log.Printf("Full server address: http://%s", listener.Addr())
+
+	log.Fatal(server.Serve(listener))
 }
