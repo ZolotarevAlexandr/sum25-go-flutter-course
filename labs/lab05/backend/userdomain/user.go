@@ -2,9 +2,22 @@ package userdomain
 
 import (
 	"errors"
-	_ "regexp"
+	"regexp"
 	"strings"
 	"time"
+)
+
+var (
+	ErrInvalidEmail    = errors.New("invalid email")
+	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidName     = errors.New("invalid name")
+)
+
+var (
+	emailRE     = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	upperCaseRE = regexp.MustCompile(`[A-Z]`)
+	lowerCaseRE = regexp.MustCompile(`[a-z]`)
+	numberRE    = regexp.MustCompile(`[0-9]`)
 )
 
 // User represents a user entity in the domain
@@ -17,7 +30,6 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// TODO: Implement NewUser function
 // NewUser creates a new user with validation
 // Requirements:
 // - Email must be valid format
@@ -25,44 +37,67 @@ type User struct {
 // - Password must be at least 8 characters
 // - CreatedAt and UpdatedAt should be set to current time
 func NewUser(email, name, password string) (*User, error) {
-	// TODO: Implement this function
-	// Hint: Use ValidateEmail, ValidateName, ValidatePassword helper functions
-	return nil, errors.New("not implemented")
+	user := &User{
+		ID:        0,
+		Email:     email,
+		Name:      name,
+		Password:  password,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := user.Validate(); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
-// TODO: Implement Validate method
 // Validate checks if the user data is valid
 func (u *User) Validate() error {
-	// TODO: Implement validation logic
 	// Check email, name, and password validity
-	return errors.New("not implemented")
+	if err := ValidateEmail(u.Email); err != nil {
+		return err
+	}
+	if err := ValidateName(u.Name); err != nil {
+		return err
+	}
+	if err := ValidatePassword(u.Password); err != nil {
+		return err
+	}
+	return nil
 }
 
-// TODO: Implement ValidateEmail function
 // ValidateEmail checks if email format is valid
 func ValidateEmail(email string) error {
-	// TODO: Implement email validation
 	// Use regex pattern to validate email format
 	// Email should not be empty and should match standard email pattern
-	return errors.New("not implemented")
+	if !emailRE.MatchString(email) {
+		return ErrInvalidEmail
+	}
+	return nil
 }
 
-// TODO: Implement ValidateName function
 // ValidateName checks if name is valid
 func ValidateName(name string) error {
-	// TODO: Implement name validation
 	// Name should be 2-50 characters, trimmed of whitespace
 	// Should not be empty after trimming
-	return errors.New("not implemented")
+	name = strings.TrimSpace(name)
+	if len(name) < 2 || len(name) > 50 {
+		return ErrInvalidName
+	}
+	return nil
 }
 
-// TODO: Implement ValidatePassword function
 // ValidatePassword checks if password meets security requirements
 func ValidatePassword(password string) error {
-	// TODO: Implement password validation
 	// Password should be at least 8 characters
 	// Should contain at least one uppercase, lowercase, and number
-	return errors.New("not implemented")
+	if !upperCaseRE.MatchString(password) || !lowerCaseRE.MatchString(password) || !numberRE.MatchString(password) {
+		return ErrInvalidPassword
+	}
+	if len(password) < 8 {
+		return ErrInvalidPassword
+	}
+	return nil
 }
 
 // UpdateName updates the user's name with validation
@@ -77,6 +112,7 @@ func (u *User) UpdateName(name string) error {
 
 // UpdateEmail updates the user's email with validation
 func (u *User) UpdateEmail(email string) error {
+	email = strings.TrimSpace(strings.ToLower(email))
 	if err := ValidateEmail(email); err != nil {
 		return err
 	}
