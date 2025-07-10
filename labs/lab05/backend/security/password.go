@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"golang.org/x/crypto/bcrypt"
-	_ "golang.org/x/crypto/bcrypt"
 )
 
 var (
